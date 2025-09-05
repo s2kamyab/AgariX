@@ -66,7 +66,7 @@ def get_model(name: str):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--csv", default = 'Datasets//s9_wells_rgb_labeled_clinical.csv', help="Path to input CSV")
+    p.add_argument("--csv", default = '/content/AgariX/Data/s9_wells_rgb_labeled_clinical.csv', help="Path to input CSV")
     p.add_argument("--target", default="category", help="Target column name (case-insensitive). Default: category")
     p.add_argument("--test_size", type=float, default=0.2, help="Test size fraction. Default: 0.2")
     p.add_argument("--model", default="rf", choices=["rf", "histgb", "logreg", "auto"],
