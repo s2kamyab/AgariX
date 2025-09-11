@@ -236,7 +236,7 @@ def predict_all(models: TrainedModels, X_df: pd.DataFrame) -> pd.DataFrame:
 # -----------------------   
 if __name__ == "__main__":
     # Example usage
-    IN_CSV = "Datasets/s9_wells_rgb_labeled_clinical.csv"
+    IN_CSV = "/content/AgariX/Data/s9_wells_rgb_labeled_clinical.csv"
     df = pd.read_csv(IN_CSV)
     df_train = df.iloc[:40]  # use first 40 samples for training (rest can be used for testing)
     df_test  = df.iloc[40:]
