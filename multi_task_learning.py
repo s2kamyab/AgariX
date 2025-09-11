@@ -210,24 +210,31 @@ def train_with_cv(df: pd.DataFrame,
 # -----------------------
 # Inference helper
 # -----------------------
+# -----------------------
+# Inference helper
+# -----------------------
 def predict_all(models: TrainedModels, X_df: pd.DataFrame) -> pd.DataFrame:
     X = X_df[["mean_R","mean_G","mean_B"]]
     yA_hat = models.antibiotic_model.predict(X)
     yB_hat = models.strain_model.predict(X)
+    yC_hat = models.category_model.predict(X)
     conc_hat = models.concentration_model.predict(X)
 
     # decode labels back to strings
     yA_lbl = models.le_antibiotic.inverse_transform(yA_hat)
     yB_lbl = models.le_strain.inverse_transform(yB_hat)
+    yC_lbl = models.le_category.inverse_transform(yC_hat)
 
     return pd.DataFrame({
         "mean_R": X_df["mean_R"],
         "mean_G": X_df["mean_G"],   
         "mean_B": X_df["mean_B"],
         "Antibiotic_true": X_df["Antibiotic"],
+        "Category_true": X_df["Category"],
         "Strain_true": X_df["Strain"],
         "Concentration_true": X_df["Concentration_mgL"],
         "Antibiotic_pred": yA_lbl,
+        "Category_pred": yC_lbl,
         "Strain_pred": yB_lbl,
         "Concentration_pred": conc_hat
     })
