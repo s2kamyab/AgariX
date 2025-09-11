@@ -114,8 +114,10 @@ class TrainedModels:
     antibiotic_model: any
     strain_model: any
     concentration_model: any
+    category_model: any
     le_antibiotic: Optional[LabelEncoder]
     le_strain: Optional[LabelEncoder]
+    le_category: Optional[LabelEncoder]
 
 def _encode(y: pd.Series) -> Tuple[np.ndarray, LabelEncoder]:
     le = LabelEncoder()
@@ -126,6 +128,7 @@ def train_with_cv(df: pd.DataFrame,
                   model_type_cls="rf",
                   model_type_reg="gb",
                   antibiotic_col="Antibiotic",
+                  category_col="Category",
                   strain_col="Strain",
                   conc_col="Concentration_mgL",
                   k_cls=5,
@@ -167,26 +170,41 @@ def train_with_cv(df: pd.DataFrame,
           f"f1_macro={cvB['test_f1_macro'].mean():.3f}±{cvB['test_f1_macro'].std():.3f}")
     clfB.fit(X_B, yB_enc)
 
-    # --- Concentration (regression)
-    maskC = df[conc_col].notna()
+    # --- Category (classification)
+    maskC = df[category_col].notna()
     X_C   = df.loc[maskC, ["mean_R","mean_G","mean_B"]]
-    yC    = df.loc[maskC, conc_col].astype(float).values
+    yC    = df.loc[maskC, category_col]
+    yC_enc, leC = _encode(yC)
 
-    kfC = KFold(n_splits=min(k_reg, len(X_C)), shuffle=True, random_state=0)
-    regC = make_regressor(model_type_reg)
+    skfC = StratifiedKFold(n_splits=min(k_cls, len(np.unique(yC_enc))), shuffle=True, random_state=0)
+    clfC = make_classifier(model_type_cls)
+    if do_grid:
+        clfC = GridSearchCV(clfC, param_grid_classifier(model_type_cls), cv=skfC, scoring="f1_macro", n_jobs=-1)
+    cvC = cross_validate(clfC, X_C, yC_enc, cv=skfC, scoring=scoring_cls, return_train_score=False)
+    print(f"[Category]   acc={cvC['test_acc'].mean():.3f}±{cvC['test_acc'].std():.3f} | "
+          f"f1_macro={cvC['test_f1_macro'].mean():.3f}±{cvC['test_f1_macro'].std():.3f}")
+    clfC.fit(X_C, yC_enc)
+
+    # --- Concentration (regression)
+    maskD = df[conc_col].notna()
+    X_D   = df.loc[maskD, ["mean_R","mean_G","mean_B"]]
+    yD    = df.loc[maskD, conc_col].astype(float).values
+
+    kfD = KFold(n_splits=min(k_reg, len(X_D)), shuffle=True, random_state=0)
+    regD = make_regressor(model_type_reg)
     scoring_reg = {"MAE": make_scorer(mean_absolute_error, greater_is_better=False),
                    "R2": make_scorer(r2_score)}
     if do_grid:
-        regC = GridSearchCV(regC, param_grid_regressor(model_type_reg), cv=kfC, scoring="neg_mean_absolute_error", n_jobs=-1)
-    cvC = cross_validate(regC, X_C, yC, cv=kfC, scoring=scoring_reg, return_train_score=False)
-    print(f"[Concentration] MAE={-cvC['test_MAE'].mean():.4f}±{cvC['test_MAE'].std():.4f} | "
-          f"R2={cvC['test_R2'].mean():.3f}±{cvC['test_R2'].std():.3f}")
-    regC.fit(X_C, yC)
+        regD = GridSearchCV(regD, param_grid_regressor(model_type_reg), cv=kfD, scoring="neg_mean_absolute_error", n_jobs=-1)
+    cvD = cross_validate(regD, X_D, yD, cv=kfD, scoring=scoring_reg, return_train_score=False)
+    print(f"[Concentration] MAE={-cvD['test_MAE'].mean():.4f}±{cvD['test_MAE'].std():.4f} | "
+          f"R2={cvD['test_R2'].mean():.3f}±{cvD['test_R2'].std():.3f}")
+    regD.fit(X_D, yD)
 
     # If you need probability outputs from classifiers, SVM has .predict_proba when probability=True
     return TrainedModels(
-        antibiotic_model=clfA, strain_model=clfB, concentration_model=regC,
-        le_antibiotic=leA, le_strain=leB
+        antibiotic_model=clfA, strain_model=clfB, category_model=clfC, concentration_model=regD,
+        le_antibiotic=leA, le_strain=leB, le_category=leC
     )
 
 # -----------------------
@@ -227,14 +245,14 @@ if __name__ == "__main__":
 
     print("\nPredicting on the test data (just as an example)...")
     preds = predict_all(models, df_test)
-    preds.to_csv("outputs/s9_wells_rgb_predictions.csv", index=False)
+    preds.to_csv("/content/AgariX/outputs/s9_wells_rgb_predictions.csv", index=False)
     print(preds.head())
 
     # In Jupyter/Colab: returning the Styler will render the colored table
     # df_with_color_pixel(preds)
     styled = df_with_color_pixel(preds)
     html = styled.to_html()  # pandas Styler -> HTML
-    with open("table_with_color_swatches.html", "w", encoding="utf-8") as f:
+    with open("/content/AgariX/outputs/table_with_color_swatches.html", "w", encoding="utf-8") as f:
         f.write(html)
     from IPython.display import HTML, display
-    display(HTML(filename="table_with_color_swatches.html")) 
+    display(HTML(filename="/content/AgariX/outputs/table_with_color_swatches.html"))
