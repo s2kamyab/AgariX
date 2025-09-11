@@ -245,8 +245,10 @@ if __name__ == "__main__":
     # Example usage
     IN_CSV = "/content/AgariX/Data/s9_wells_rgb_labeled_clinical.csv"
     df = pd.read_csv(IN_CSV)
-    df_train = df.iloc[:40]  # use first 40 samples for training (rest can be used for testing)
-    df_test  = df.iloc[40:]
+    # shuffle all rows
+    df_shuffled = df.sample(frac=1, random_state=42).reset_index(drop=True)
+    df_train = df_shuffled.iloc[:40]  # use first 40 samples for training (rest can be used for testing)
+    df_test  = df_shuffled.iloc[40:]
     print("Training models with 5-fold CV and grid search...")
     models = train_with_cv(df_train, model_type_cls="rf", model_type_reg="gb", do_grid=True)
 
