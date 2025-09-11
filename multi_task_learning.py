@@ -12,6 +12,7 @@ from sklearn.metrics import make_scorer, f1_score, accuracy_score, mean_absolute
 from sklearn.svm import SVC, SVR
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, GradientBoostingClassifier, GradientBoostingRegressor
 import colorsys
+from utils import *
 
 # -----------------------
 # Feature engineering
@@ -217,7 +218,7 @@ def predict_all(models: TrainedModels, X_df: pd.DataFrame) -> pd.DataFrame:
 # -----------------------   
 if __name__ == "__main__":
     # Example usage
-    IN_CSV = "/content/AgariX/Data/s9_wells_rgb_labeled_clinical.csv"
+    IN_CSV = "Datasets/s9_wells_rgb_labeled_clinical.csv"
     df = pd.read_csv(IN_CSV)
     df_train = df.iloc[:40]  # use first 40 samples for training (rest can be used for testing)
     df_test  = df.iloc[40:]
@@ -226,5 +227,14 @@ if __name__ == "__main__":
 
     print("\nPredicting on the test data (just as an example)...")
     preds = predict_all(models, df_test)
-    preds.to_csv("/content/AgariX/outputs/s9_wells_rgb_predictions.csv", index=False)
+    preds.to_csv("outputs/s9_wells_rgb_predictions.csv", index=False)
     print(preds.head())
+
+    # In Jupyter/Colab: returning the Styler will render the colored table
+    df_with_color_pixel(df)
+    styled = df_with_color_pixel(df)
+    html = styled.to_html()  # pandas Styler -> HTML
+    with open("table_with_color_swatches.html", "w", encoding="utf-8") as f:
+        f.write(html)
+    from IPython.display import HTML, display
+    display(HTML(filename="table_with_color_swatches.html")) 
