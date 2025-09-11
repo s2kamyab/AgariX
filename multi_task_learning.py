@@ -231,8 +231,8 @@ if __name__ == "__main__":
     print(preds.head())
 
     # In Jupyter/Colab: returning the Styler will render the colored table
-    df_with_color_pixel(df)
-    styled = df_with_color_pixel(df)
+    # df_with_color_pixel(preds)
+    styled = df_with_color_pixel(preds)
     html = styled.to_html()  # pandas Styler -> HTML
     with open("table_with_color_swatches.html", "w", encoding="utf-8") as f:
         f.write(html)
