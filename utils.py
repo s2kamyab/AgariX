@@ -4,10 +4,10 @@ import numpy as np
 
 def df_with_color_pixel(
     df: pd.DataFrame,
-    r_col="r", g_col="g", b_col="b",
+    r_col="mean_R", g_col="mean_G", b_col="mean_B",
     swatch_col="Color",  # name of the swatch column
     swatch_width_px=22
-) -> pd.io.formats.style.Styler:
+): #-> pd.io.formats.style.Styler:
     """
     Return a pandas Styler that shows a color 'pixel' per row using (r,g,b),
     next to all the other columns in that row.
@@ -49,9 +49,14 @@ def df_with_color_pixel(
                 styles.append("")
         return styles
 
+    # styled = (
+    #     df2.drop(columns=["__hex__"])
+    #        .style
+    #        .apply(style_row, axis=1)
+    #        .set_properties(subset=[swatch_col], **{"text-align": "center"})
+    # )
     styled = (
-        df2.drop(columns=["__hex__"])
-           .style
+        df2.style
            .apply(style_row, axis=1)
            .set_properties(subset=[swatch_col], **{"text-align": "center"})
     )
