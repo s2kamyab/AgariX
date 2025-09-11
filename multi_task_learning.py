@@ -217,7 +217,7 @@ def predict_all(models: TrainedModels, X_df: pd.DataFrame) -> pd.DataFrame:
 # -----------------------   
 if __name__ == "__main__":
     # Example usage
-    IN_CSV = "Datasets/s9_wells_rgb_labeled_clinical.csv"
+    IN_CSV = "/content/AgariX/Data/s9_wells_rgb_labeled_clinical.csv"
     df = pd.read_csv(IN_CSV)
     df_train = df.iloc[:40]  # use first 40 samples for training (rest can be used for testing)
     df_test  = df.iloc[40:]
@@ -226,5 +226,5 @@ if __name__ == "__main__":
 
     print("\nPredicting on the test data (just as an example)...")
     preds = predict_all(models, df_test)
-    pd.to_csv(preds, "outputs/s9_wells_rgb_predictions.csv", index=False)
+    preds.to_csv("/content/AgariX/outputs/s9_wells_rgb_predictions.csv", index=False)
     print(preds.head())
