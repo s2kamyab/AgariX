@@ -227,7 +227,7 @@ if __name__ == "__main__":
 
     print("\nPredicting on the test data (just as an example)...")
     preds = predict_all(models, df_test)
-    preds.to_csv("outputs/s9_wells_rgb_predictions.csv", index=False)
+    preds.to_csv("coutputs/s9_wells_rgb_predictions.csv", index=False)
     print(preds.head())
 
     # In Jupyter/Colab: returning the Styler will render the colored table
