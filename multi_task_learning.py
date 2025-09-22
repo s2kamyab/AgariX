@@ -1,4 +1,5 @@
 # pip install scikit-learn pandas numpy
+import argparse
 import pandas as pd
 import numpy as np
 from typing import Tuple, Dict, Optional
@@ -124,13 +125,10 @@ def _encode(y: pd.Series) -> Tuple[np.ndarray, LabelEncoder]:
     y_enc = le.fit_transform(y.astype(str).values)
     return y_enc, le
 
-def train_with_cv(df: pd.DataFrame,
+def train_with_cv(X: pd.DataFrame,
+                  y: pd.Series,
                   model_type_cls="rf",
                   model_type_reg="gb",
-                  antibiotic_col="Antibiotic",
-                  category_col="Category",
-                  strain_col="Strain",
-                  conc_col="Concentration_mgL",
                   k_cls=5,
                   k_reg=5,
                   do_grid=True) -> TrainedModels:
@@ -139,67 +137,83 @@ def train_with_cv(df: pd.DataFrame,
     """
 
     # --- Antibiotic (classification)
-    maskA = df[antibiotic_col].notna()
-    X_A   = df.loc[maskA, ["mean_R","mean_G","mean_B"]]
-    yA    = df.loc[maskA, antibiotic_col]
-    yA_enc, leA = _encode(yA)
+    if "Antibiotic" in y.columns:
+        antibiotic_col="Antibiotic"
+        maskA = y[antibiotic_col].notna()
+        X_A   = X.loc[maskA, :]
+        yA    = y.loc[maskA, antibiotic_col]
+        yA_enc, leA = _encode(yA)
 
-    skfA = StratifiedKFold(n_splits=min(k_cls, len(np.unique(yA_enc))), shuffle=True, random_state=0)
-    clfA = make_classifier(model_type_cls)
-    scoring_cls = {"acc": make_scorer(accuracy_score),
-                   "f1_macro": make_scorer(f1_score, average="macro", zero_division=0)}
-    if do_grid:
-        clfA = GridSearchCV(clfA, param_grid_classifier(model_type_cls), cv=skfA, scoring="f1_macro", n_jobs=-1)
-    cvA = cross_validate(clfA, X_A, yA_enc, cv=skfA, scoring=scoring_cls, return_train_score=False)
-    print(f"[Antibiotic] acc={cvA['test_acc'].mean():.3f}±{cvA['test_acc'].std():.3f} | "
+        skfA = StratifiedKFold(n_splits=min(k_cls, len(np.unique(yA_enc))), shuffle=True, random_state=0)
+        clfA = make_classifier(model_type_cls)
+        scoring_cls = {"acc": make_scorer(accuracy_score),
+                    "f1_macro": make_scorer(f1_score, average="macro", zero_division=0)}
+        # if do_grid:
+        #     clfA = GridSearchCV(clfA, param_grid_classifier(model_type_cls), cv=skfA, scoring="f1_macro", n_jobs=-1)
+        cvA = cross_validate(clfA, X_A, yA_enc, cv=skfA, scoring=scoring_cls, return_train_score=False)
+        print(f"[Antibiotic] acc={cvA['test_acc'].mean():.3f}±{cvA['test_acc'].std():.3f} | "
           f"f1_macro={cvA['test_f1_macro'].mean():.3f}±{cvA['test_f1_macro'].std():.3f}")
-    clfA.fit(X_A, yA_enc)
+        clfA.fit(X_A, yA_enc)
+    else:
+        clfA, leA = None, None
 
     # --- Strain (classification)
-    maskB = df[strain_col].notna()
-    X_B   = df.loc[maskB, ["mean_R","mean_G","mean_B"]]
-    yB    = df.loc[maskB, strain_col]
-    yB_enc, leB = _encode(yB)
+    if "Strain" in y.columns:
+        strain_col="Strain"
+        maskB = y[strain_col].notna()
+        X_B   = X.loc[maskB, :]
+        yB    = y.loc[maskB, strain_col]
+        yB_enc, leB = _encode(yB)
 
-    skfB = StratifiedKFold(n_splits=min(k_cls, len(np.unique(yB_enc))), shuffle=True, random_state=0)
-    clfB = make_classifier(model_type_cls)
-    if do_grid:
-        clfB = GridSearchCV(clfB, param_grid_classifier(model_type_cls), cv=skfB, scoring="f1_macro", n_jobs=-1)
-    cvB = cross_validate(clfB, X_B, yB_enc, cv=skfB, scoring=scoring_cls, return_train_score=False)
-    print(f"[Strain]     acc={cvB['test_acc'].mean():.3f}±{cvB['test_acc'].std():.3f} | "
-          f"f1_macro={cvB['test_f1_macro'].mean():.3f}±{cvB['test_f1_macro'].std():.3f}")
-    clfB.fit(X_B, yB_enc)
+        skfB = StratifiedKFold(n_splits=min(k_cls, len(np.unique(yB_enc))), shuffle=True, random_state=0)
+        clfB = make_classifier(model_type_cls)
+        # if do_grid:
+        #     clfB = GridSearchCV(clfB, param_grid_classifier(model_type_cls), cv=skfB, scoring="f1_macro", n_jobs=-1)
+        cvB = cross_validate(clfB, X_B, yB_enc, cv=skfB, scoring=scoring_cls, return_train_score=False)
+        print(f"[Strain]     acc={cvB['test_acc'].mean():.3f}±{cvB['test_acc'].std():.3f} | "
+            f"f1_macro={cvB['test_f1_macro'].mean():.3f}±{cvB['test_f1_macro'].std():.3f}")
+        clfB.fit(X_B, yB_enc)
+    else:
+        clfB, leB = None, None
 
     # --- Category (classification)
-    maskC = df[category_col].notna()
-    X_C   = df.loc[maskC, ["mean_R","mean_G","mean_B"]]
-    yC    = df.loc[maskC, category_col]
-    yC_enc, leC = _encode(yC)
+    if "Category" in y.columns:
+        category_col="Category"
+        maskC = y[category_col].notna()
+        X_C   = X.loc[maskC, :]
+        yC    = y.loc[maskC, category_col]
+        yC_enc, leC = _encode(yC)
 
-    skfC = StratifiedKFold(n_splits=min(k_cls, len(np.unique(yC_enc))), shuffle=True, random_state=0)
-    clfC = make_classifier(model_type_cls)
-    if do_grid:
-        clfC = GridSearchCV(clfC, param_grid_classifier(model_type_cls), cv=skfC, scoring="f1_macro", n_jobs=-1)
-    cvC = cross_validate(clfC, X_C, yC_enc, cv=skfC, scoring=scoring_cls, return_train_score=False)
-    print(f"[Category]   acc={cvC['test_acc'].mean():.3f}±{cvC['test_acc'].std():.3f} | "
-          f"f1_macro={cvC['test_f1_macro'].mean():.3f}±{cvC['test_f1_macro'].std():.3f}")
-    clfC.fit(X_C, yC_enc)
+        skfC = StratifiedKFold(n_splits=min(k_cls, len(np.unique(yC_enc))), shuffle=True, random_state=0)
+        clfC = make_classifier(model_type_cls)
+        # if do_grid:
+        #     clfC = GridSearchCV(clfC, param_grid_classifier(model_type_cls), cv=skfC, scoring="f1_macro", n_jobs=-1)
+        cvC = cross_validate(clfC, X_C, yC_enc, cv=skfC, scoring=scoring_cls, return_train_score=False)
+        print(f"[Category]   acc={cvC['test_acc'].mean():.3f}±{cvC['test_acc'].std():.3f} | "
+            f"f1_macro={cvC['test_f1_macro'].mean():.3f}±{cvC['test_f1_macro'].std():.3f}")
+        clfC.fit(X_C, yC_enc)
+    else:
+        clfC, leC = None, None
 
     # --- Concentration (regression)
-    maskD = df[conc_col].notna()
-    X_D   = df.loc[maskD, ["mean_R","mean_G","mean_B"]]
-    yD    = df.loc[maskD, conc_col].astype(float).values
+    if "Concentration_mgL" in y.columns:
+        conc_col="Concentration_mgL"
+        maskD = y[conc_col].notna()
+        X_D   = X.loc[maskD, :]
+        yD    = y.loc[maskD, conc_col].astype(float).values
 
-    kfD = KFold(n_splits=min(k_reg, len(X_D)), shuffle=True, random_state=0)
-    regD = make_regressor(model_type_reg)
-    scoring_reg = {"MAE": make_scorer(mean_absolute_error, greater_is_better=False),
-                   "R2": make_scorer(r2_score)}
-    if do_grid:
-        regD = GridSearchCV(regD, param_grid_regressor(model_type_reg), cv=kfD, scoring="neg_mean_absolute_error", n_jobs=-1)
-    cvD = cross_validate(regD, X_D, yD, cv=kfD, scoring=scoring_reg, return_train_score=False)
-    print(f"[Concentration] MAE={-cvD['test_MAE'].mean():.4f}±{cvD['test_MAE'].std():.4f} | "
-          f"R2={cvD['test_R2'].mean():.3f}±{cvD['test_R2'].std():.3f}")
-    regD.fit(X_D, yD)
+        kfD = KFold(n_splits=min(k_reg, len(X_D)), shuffle=True, random_state=0)
+        regD = make_regressor(model_type_reg)
+        scoring_reg = {"MAE": make_scorer(mean_absolute_error, greater_is_better=False),
+                    "R2": make_scorer(r2_score)}
+        # if do_grid:
+        #     regD = GridSearchCV(regD, param_grid_regressor(model_type_reg), cv=kfD, scoring="neg_mean_absolute_error", n_jobs=-1)
+        cvD = cross_validate(regD, X_D, yD, cv=kfD, scoring=scoring_reg, return_train_score=False)
+        print(f"[Concentration] MAE={-cvD['test_MAE'].mean():.4f}±{cvD['test_MAE'].std():.4f} | "
+            f"R2={cvD['test_R2'].mean():.3f}±{cvD['test_R2'].std():.3f}")
+        regD.fit(X_D, yD)
+    else:
+        regD = None
 
     # If you need probability outputs from classifiers, SVM has .predict_proba when probability=True
     return TrainedModels(
@@ -210,26 +224,38 @@ def train_with_cv(df: pd.DataFrame,
 # -----------------------
 # Inference helper
 # -----------------------
-# -----------------------
-# Inference helper
-# -----------------------
 def predict_all(models: TrainedModels, X_df: pd.DataFrame) -> pd.DataFrame:
-    X = X_df[["mean_R","mean_G","mean_B"]]
-    yA_hat = models.antibiotic_model.predict(X)
-    yB_hat = models.strain_model.predict(X)
-    yC_hat = models.category_model.predict(X)
-    conc_hat = models.concentration_model.predict(X)
+    X = X_df#[["mean_R","mean_G","mean_B", "Antibiotic"]]
+    if models.antibiotic_model:
+        yA_hat = models.antibiotic_model.predict(X)
+        yA_lbl = models.le_antibiotic.inverse_transform(yA_hat)
+    else:
+        yA_lbl = None
+    if models.strain_model:
+        yB_hat = models.strain_model.predict(X)
+        yB_lbl = models.le_strain.inverse_transform(yB_hat)
+    else:
+        yB_lbl = None
+    if models.category_model:
+        yC_hat = models.category_model.predict(X)
+        yC_lbl = models.le_category.inverse_transform(yC_hat)
+    else:
+        yC_lbl = None   
+    if models.concentration_model:
+        conc_hat = models.concentration_model.predict(X)
+    else:
+        conc_hat = None
 
     # decode labels back to strings
-    yA_lbl = models.le_antibiotic.inverse_transform(yA_hat)
-    yB_lbl = models.le_strain.inverse_transform(yB_hat)
-    yC_lbl = models.le_category.inverse_transform(yC_hat)
+    
+    # yB_lbl = models.le_strain.inverse_transform(yB_hat)
+    # yC_lbl = models.le_category.inverse_transform(yC_hat)
 
     return pd.DataFrame({
         "mean_R": X_df["mean_R"],
         "mean_G": X_df["mean_G"],   
         "mean_B": X_df["mean_B"],
-        "Antibiotic_true": X_df["Antibiotic"],
+        "Antibiotic": X_df["Antibiotic"],
         "Category_true": X_df["Category"],
         "Strain_true": X_df["Strain"],
         "Concentration_true": X_df["Concentration_mgL"],
@@ -243,25 +269,36 @@ def predict_all(models: TrainedModels, X_df: pd.DataFrame) -> pd.DataFrame:
 # -----------------------   
 if __name__ == "__main__":
     # Example usage
-    IN_CSV = "/content/AgariX/Data/s9_wells_rgb_labeled_clinical.csv"
-    df = pd.read_csv(IN_CSV)
+    ap = argparse.ArgumentParser(description="Train ML model to predict Antibiotic susceptibility")
+    ap.add_argument("-X", type=str, default=[], help="Input to the model")
+    ap.add_argument("--y", default= [], help="Model Output")
+    args = ap.parse_args()
+    # IN_CSV = "Datasets/s9_wells_rgb_labeled_clinical.csv"
+    # df = pd.read_csv(IN_CSV)
     # shuffle all rows
-    df_shuffled = df.sample(frac=1, random_state=42).reset_index(drop=True)
-    df_train = df_shuffled.iloc[:40]  # use first 40 samples for training (rest can be used for testing)
-    df_test  = df_shuffled.iloc[40:]
+    X = args.X
+    y = args.y
+    perm = np.random.permutation(len(X))  # same perm for both
+    X_shuf = X.iloc[perm].reset_index(drop=True)
+    y_shuf = y.iloc[perm].reset_index(drop=True)
+    # df_shuffled = df.sample(frac=1, random_state=42).reset_index(drop=True)
+    X_train = X_shuf.iloc[:40]  # use first 40 samples for training (rest can be used for testing)
+    y_train = y_shuf.iloc[:40]
+    X_test = X_shuf.iloc[40:]
+    y_test = y_shuf.iloc[40:]
     print("Training models with 5-fold CV and grid search...")
-    models = train_with_cv(df_train, model_type_cls="rf", model_type_reg="gb", do_grid=True)
+    models = train_with_cv(X_train, y_train, model_type_cls="rf", model_type_reg="gb", do_grid=True)
 
     print("\nPredicting on the test data (just as an example)...")
-    preds = predict_all(models, df_test)
-    preds.to_csv("/content/AgariX/outputs/s9_wells_rgb_predictions.csv", index=False)
+    preds = predict_all(models, X_test)
+    preds.to_csv("outputs/s9_wells_rgb_predictions.csv", index=False)
     print(preds.head())
 
     # In Jupyter/Colab: returning the Styler will render the colored table
     # df_with_color_pixel(preds)
     styled = df_with_color_pixel(preds)
     html = styled.to_html()  # pandas Styler -> HTML
-    with open("/content/AgariX/outputs/table_with_color_swatches.html", "w", encoding="utf-8") as f:
+    with open("table_with_color_swatches.html", "w", encoding="utf-8") as f:
         f.write(html)
     from IPython.display import HTML, display
-    display(HTML(filename="/content/AgariX/outputs/table_with_color_swatches.html"))
+    display(HTML(filename="table_with_color_swatches.html")) 
