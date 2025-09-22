@@ -18,31 +18,31 @@ from utils import *
 # -----------------------
 # Feature engineering
 # -----------------------
-class ColorFeatures(BaseEstimator, TransformerMixin):
-    """
-    Input: DataFrame with columns ['mean_R', 'mean_G', 'mean_B'].
-    Output features: [R,G,B, r_frac,g_frac,b_frac, hue_deg, sat, val].
-    """
-    def __init__(self):
-        pass
-    def fit(self, X, y=None): return self
-    def transform(self, X):
-        df = pd.DataFrame(X, columns=["mean_R","mean_G","mean_B"]) if not isinstance(X, pd.DataFrame) else X.copy()
-        R = df["mean_R"].astype(float).to_numpy()
-        G = df["mean_G"].astype(float).to_numpy()
-        B = df["mean_B"].astype(float).to_numpy()
+# class ColorFeatures(BaseEstimator, TransformerMixin):
+#     """
+#     Input: DataFrame with columns ['mean_R', 'mean_G', 'mean_B'].
+#     Output features: [R,G,B, r_frac,g_frac,b_frac, hue_deg, sat, val].
+#     """
+#     def __init__(self):
+#         pass
+#     def fit(self, X, y=None): return self
+#     def transform(self, X):
+#         df = pd.DataFrame(X, columns=["mean_R","mean_G","mean_B"]) if not isinstance(X, pd.DataFrame) else X.copy()
+#         R = df["mean_R"].astype(float).to_numpy()
+#         G = df["mean_G"].astype(float).to_numpy()
+#         B = df["mean_B"].astype(float).to_numpy()
 
-        S = R + G + B + 1e-8
-        r_frac, g_frac, b_frac = R/S, G/S, B/S
+#         S = R + G + B + 1e-8
+#         r_frac, g_frac, b_frac = R/S, G/S, B/S
 
-        rgb01 = np.stack([R, G, B], axis=1) / 255.0
-        hsv = np.array([colorsys.rgb_to_hsv(*row) for row in rgb01])
-        hue_deg = hsv[:,0] * 360.0
-        sat     = hsv[:,1]
-        val     = hsv[:,2]
+#         rgb01 = np.stack([R, G, B], axis=1) / 255.0
+#         hsv = np.array([colorsys.rgb_to_hsv(*row) for row in rgb01])
+#         hue_deg = hsv[:,0] * 360.0
+#         sat     = hsv[:,1]
+#         val     = hsv[:,2]
 
-        feats = np.column_stack([R,G,B, r_frac,g_frac,b_frac, hue_deg,sat,val])
-        return feats
+#         feats = np.column_stack([R,G,B, r_frac,g_frac,b_frac, hue_deg,sat,val])
+#         return feats
 
 # -----------------------
 # Model choosers
@@ -51,18 +51,14 @@ def make_classifier(model_type: str):
     if model_type == "svm":
         # scale features for SVM
         return Pipeline([
-            ("feat", ColorFeatures()),
-            ("scale", StandardScaler()),
             ("clf", SVC(kernel="rbf", probability=True, class_weight="balanced"))
         ])
     if model_type == "rf":
         return Pipeline([
-            ("feat", ColorFeatures()),
             ("clf", RandomForestClassifier(n_estimators=300, random_state=0, class_weight="balanced"))
         ])
     if model_type == "gb":
         return Pipeline([
-            ("feat", ColorFeatures()),
             ("clf", GradientBoostingClassifier())
         ])
     raise ValueError("model_type must be one of {'svm','rf','gb'}")
@@ -70,18 +66,14 @@ def make_classifier(model_type: str):
 def make_regressor(model_type: str):
     if model_type == "svm":
         return Pipeline([
-            ("feat", ColorFeatures()),
-            ("scale", StandardScaler()),
             ("reg", SVR(kernel="rbf"))
         ])
     if model_type == "rf":
         return Pipeline([
-            ("feat", ColorFeatures()),
             ("reg", RandomForestRegressor(n_estimators=400, random_state=0))
         ])
     if model_type == "gb":
         return Pipeline([
-            ("feat", ColorFeatures()),
             ("reg", GradientBoostingRegressor())
         ])
     raise ValueError("model_type must be one of {'svm','rf','gb'}")
@@ -89,23 +81,23 @@ def make_regressor(model_type: str):
 # -----------------------
 # Small, safe param grids (tiny, to avoid overfitting on 65 samples)
 # -----------------------
-def param_grid_classifier(model_type: str):
-    if model_type == "svm":
-        return {"clf__C":[0.5,1,2], "clf__gamma":["scale","auto"]}
-    if model_type == "rf":
-        return {"clf__max_depth":[None, 3, 5], "clf__min_samples_leaf":[1, 3, 5]}
-    if model_type == "gb":
-        return {"clf__n_estimators":[100,200], "clf__learning_rate":[0.05,0.1], "clf__max_depth":[2,3]}
-    return {}
+# def param_grid_classifier(model_type: str):
+#     if model_type == "svm":
+#         return {"clf__C":[0.5,1,2], "clf__gamma":["scale","auto"]}
+#     if model_type == "rf":
+#         return {"clf__max_depth":[None, 3, 5], "clf__min_samples_leaf":[1, 3, 5]}
+#     if model_type == "gb":
+#         return {"clf__n_estimators":[100,200], "clf__learning_rate":[0.05,0.1], "clf__max_depth":[2,3]}
+#     return {}
 
-def param_grid_regressor(model_type: str):
-    if model_type == "svm":
-        return {"reg__C":[0.5,1,2], "reg__gamma":["scale","auto"], "reg__epsilon":[0.05,0.1]}
-    if model_type == "rf":
-        return {"reg__max_depth":[None, 3, 5], "reg__min_samples_leaf":[1, 3, 5]}
-    if model_type == "gb":
-        return {"reg__n_estimators":[200,400], "reg__learning_rate":[0.05,0.1], "reg__max_depth":[2,3]}
-    return {}
+# def param_grid_regressor(model_type: str):
+#     if model_type == "svm":
+#         return {"reg__C":[0.5,1,2], "reg__gamma":["scale","auto"], "reg__epsilon":[0.05,0.1]}
+#     if model_type == "rf":
+#         return {"reg__max_depth":[None, 3, 5], "reg__min_samples_leaf":[1, 3, 5]}
+#     if model_type == "gb":
+#         return {"reg__n_estimators":[200,400], "reg__learning_rate":[0.05,0.1], "reg__max_depth":[2,3]}
+#     return {}
 
 # -----------------------
 # Training + CV helpers
@@ -146,13 +138,14 @@ def train_with_cv(X: pd.DataFrame,
 
         skfA = StratifiedKFold(n_splits=min(k_cls, len(np.unique(yA_enc))), shuffle=True, random_state=0)
         clfA = make_classifier(model_type_cls)
-        scoring_cls = {"acc": make_scorer(accuracy_score),
-                    "f1_macro": make_scorer(f1_score, average="macro", zero_division=0)}
+        # scoring_cls = {"acc": make_scorer(accuracy_score),
+        #             "f1_macro": make_scorer(f1_score, average="macro", zero_division=0)}
         # if do_grid:
         #     clfA = GridSearchCV(clfA, param_grid_classifier(model_type_cls), cv=skfA, scoring="f1_macro", n_jobs=-1)
-        cvA = cross_validate(clfA, X_A, yA_enc, cv=skfA, scoring=scoring_cls, return_train_score=False)
-        print(f"[Antibiotic] acc={cvA['test_acc'].mean():.3f}±{cvA['test_acc'].std():.3f} | "
-          f"f1_macro={cvA['test_f1_macro'].mean():.3f}±{cvA['test_f1_macro'].std():.3f}")
+        # cvA = cross_validate(clfA, X_A, yA_enc, cv=skfA, scoring=scoring_cls, return_train_score=False)
+        # print(f"[Antibiotic] acc={cvA['test_acc'].mean():.3f}±{cvA['test_acc'].std():.3f} | "
+        #   f"f1_macro={cvA['test_f1_macro'].mean():.3f}±{cvA['test_f1_macro'].std():.3f}")
+        
         clfA.fit(X_A, yA_enc)
     else:
         clfA, leA = None, None
@@ -169,9 +162,10 @@ def train_with_cv(X: pd.DataFrame,
         clfB = make_classifier(model_type_cls)
         # if do_grid:
         #     clfB = GridSearchCV(clfB, param_grid_classifier(model_type_cls), cv=skfB, scoring="f1_macro", n_jobs=-1)
-        cvB = cross_validate(clfB, X_B, yB_enc, cv=skfB, scoring=scoring_cls, return_train_score=False)
-        print(f"[Strain]     acc={cvB['test_acc'].mean():.3f}±{cvB['test_acc'].std():.3f} | "
-            f"f1_macro={cvB['test_f1_macro'].mean():.3f}±{cvB['test_f1_macro'].std():.3f}")
+        # cvB = cross_validate(clfB, X_B, yB_enc, cv=skfB, scoring=scoring_cls, return_train_score=False)
+        # print(f"[Strain]     acc={cvB['test_acc'].mean():.3f}±{cvB['test_acc'].std():.3f} | "
+        #     f"f1_macro={cvB['test_f1_macro'].mean():.3f}±{cvB['test_f1_macro'].std():.3f}")
+        # print(X_B, yB_enc, clfB)
         clfB.fit(X_B, yB_enc)
     else:
         clfB, leB = None, None
@@ -183,14 +177,14 @@ def train_with_cv(X: pd.DataFrame,
         X_C   = X.loc[maskC, :]
         yC    = y.loc[maskC, category_col]
         yC_enc, leC = _encode(yC)
-
+        # print(leC)
         skfC = StratifiedKFold(n_splits=min(k_cls, len(np.unique(yC_enc))), shuffle=True, random_state=0)
         clfC = make_classifier(model_type_cls)
         # if do_grid:
         #     clfC = GridSearchCV(clfC, param_grid_classifier(model_type_cls), cv=skfC, scoring="f1_macro", n_jobs=-1)
-        cvC = cross_validate(clfC, X_C, yC_enc, cv=skfC, scoring=scoring_cls, return_train_score=False)
-        print(f"[Category]   acc={cvC['test_acc'].mean():.3f}±{cvC['test_acc'].std():.3f} | "
-            f"f1_macro={cvC['test_f1_macro'].mean():.3f}±{cvC['test_f1_macro'].std():.3f}")
+        # cvC = cross_validate(clfC, X_C, yC_enc, cv=skfC, scoring=scoring_cls, return_train_score=False)
+        # print(f"[Category]   acc={cvC['test_acc'].mean():.3f}±{cvC['test_acc'].std():.3f} | "
+        #     f"f1_macro={cvC['test_f1_macro'].mean():.3f}±{cvC['test_f1_macro'].std():.3f}")
         clfC.fit(X_C, yC_enc)
     else:
         clfC, leC = None, None
@@ -204,13 +198,13 @@ def train_with_cv(X: pd.DataFrame,
 
         kfD = KFold(n_splits=min(k_reg, len(X_D)), shuffle=True, random_state=0)
         regD = make_regressor(model_type_reg)
-        scoring_reg = {"MAE": make_scorer(mean_absolute_error, greater_is_better=False),
-                    "R2": make_scorer(r2_score)}
+        # scoring_reg = {"MAE": make_scorer(mean_absolute_error, greater_is_better=False),
+        #             "R2": make_scorer(r2_score)}
         # if do_grid:
         #     regD = GridSearchCV(regD, param_grid_regressor(model_type_reg), cv=kfD, scoring="neg_mean_absolute_error", n_jobs=-1)
-        cvD = cross_validate(regD, X_D, yD, cv=kfD, scoring=scoring_reg, return_train_score=False)
-        print(f"[Concentration] MAE={-cvD['test_MAE'].mean():.4f}±{cvD['test_MAE'].std():.4f} | "
-            f"R2={cvD['test_R2'].mean():.3f}±{cvD['test_R2'].std():.3f}")
+        # cvD = cross_validate(regD, X_D, yD, cv=kfD, scoring=scoring_reg, return_train_score=False)
+        # print(f"[Concentration] MAE={-cvD['test_MAE'].mean():.4f}±{cvD['test_MAE'].std():.4f} | "
+        #     f"R2={cvD['test_R2'].mean():.3f}±{cvD['test_R2'].std():.3f}")
         regD.fit(X_D, yD)
     else:
         regD = None
@@ -224,81 +218,114 @@ def train_with_cv(X: pd.DataFrame,
 # -----------------------
 # Inference helper
 # -----------------------
-def predict_all(models: TrainedModels, X_df: pd.DataFrame) -> pd.DataFrame:
+def predict_all(models: TrainedModels, X_df: pd.DataFrame, y_df: pd.DataFrame) -> pd.DataFrame:
     X = X_df#[["mean_R","mean_G","mean_B", "Antibiotic"]]
+
+
+    y_pred = pd.DataFrame()
     if models.antibiotic_model:
-        yA_hat = models.antibiotic_model.predict(X)
-        yA_lbl = models.le_antibiotic.inverse_transform(yA_hat)
-    else:
-        yA_lbl = None
+        tt = models.antibiotic_model.predict(X)
+        y_pred["Antibiotic"] = models.le_antibiotic.inverse_transform(tt)
+        # y_pred["Antibiotic"] = tt
+    # else:
+    #     yA_lbl = None
     if models.strain_model:
-        yB_hat = models.strain_model.predict(X)
-        yB_lbl = models.le_strain.inverse_transform(yB_hat)
-    else:
-        yB_lbl = None
+        tt = models.strain_model.predict(X)
+        # print(tt)
+        # print(models.le_strain.inverse_transform(tt))
+        y_pred["Strain_pred"] = models.le_strain.inverse_transform(tt)
+        # print(y_pred["Strain"])
+        # print(y_pred["Strain"])
+        # y_pred["Strain"] = tt
+    # else:
+    #     yB_lbl = None
     if models.category_model:
-        yC_hat = models.category_model.predict(X)
-        yC_lbl = models.le_category.inverse_transform(yC_hat)
-    else:
-        yC_lbl = None   
+        tt = models.category_model.predict(X)
+        y_pred["Category"] = models.le_category.inverse_transform(tt)
+        # y_pred["Category"] = tt
+    # else:
+    #     yC_lbl = None   
     if models.concentration_model:
-        conc_hat = models.concentration_model.predict(X)
+        y_pred["Concentration_mgL"] = models.concentration_model.predict(X)
     else:
         conc_hat = None
 
+    # print(y_pred)
     # decode labels back to strings
-    
+    # print(y_pred)
+    # print(y_df)
     # yB_lbl = models.le_strain.inverse_transform(yB_hat)
     # yC_lbl = models.le_category.inverse_transform(yC_hat)
-
-    return pd.DataFrame({
-        "mean_R": X_df["mean_R"],
-        "mean_G": X_df["mean_G"],   
-        "mean_B": X_df["mean_B"],
-        "Antibiotic": X_df["Antibiotic"],
-        "Category_true": X_df["Category"],
-        "Strain_true": X_df["Strain"],
-        "Concentration_true": X_df["Concentration_mgL"],
-        "Antibiotic_pred": yA_lbl,
-        "Category_pred": yC_lbl,
-        "Strain_pred": yB_lbl,
-        "Concentration_pred": conc_hat
-    })
+    out = y_pred#pd.concat([y_df, y_pred], axis=1)
+    # out = pd.DataFrame()
+    # for col in X_df.columns:
+    #   out[col] = X_df[col]
+    # # y_df.drop(columns='Unnamed: 0')
+    # # print(y_df.columns)
+    # for col in y_pred.columns:
+    #   out[col + "_True"] = y_df[col]
+    #   out[col + "_pred"] = y_pred[col]
+    return out
 # -----------------------
 # Example usage:
 # -----------------------   
 if __name__ == "__main__":
     # Example usage
     ap = argparse.ArgumentParser(description="Train ML model to predict Antibiotic susceptibility")
-    ap.add_argument("-X", type=str, default=[], help="Input to the model")
+    ap.add_argument("--X", default=[], help="Input to the model")
     ap.add_argument("--y", default= [], help="Model Output")
     args = ap.parse_args()
     # IN_CSV = "Datasets/s9_wells_rgb_labeled_clinical.csv"
     # df = pd.read_csv(IN_CSV)
     # shuffle all rows
-    X = args.X
-    y = args.y
+    X = pd.read_csv(args.X)
+    if "Antibiotic" in X.columns:
+      X_enc, le_x_anti = _encode(X["Antibiotic"])
+      X["Antibiotic"] = X_enc
+    # print(X)
+    y = pd.read_csv(args.y)
+    # print(y)
     perm = np.random.permutation(len(X))  # same perm for both
     X_shuf = X.iloc[perm].reset_index(drop=True)
     y_shuf = y.iloc[perm].reset_index(drop=True)
+    # print(X_shuf)
+    # print(y_shuf)
+    ### Normalization ###########################
+    scaler = StandardScaler()  # uses population std (ddof=0)
+    num_cols = X_shuf.select_dtypes(include="number").columns
+
+    df_std = X_shuf.copy()
+    df_std[num_cols] = scaler.fit_transform(X_shuf[num_cols])
+    for cols in num_cols:
+      X_shuf[cols] = df_std[cols]  # on TRAIN set
+
+
+
     # df_shuffled = df.sample(frac=1, random_state=42).reset_index(drop=True)
     X_train = X_shuf.iloc[:40]  # use first 40 samples for training (rest can be used for testing)
     y_train = y_shuf.iloc[:40]
     X_test = X_shuf.iloc[40:]
     y_test = y_shuf.iloc[40:]
+    # print(X_train)
+    # print(X_test)
+    # print(y_train)
+    # print(y_test)
     print("Training models with 5-fold CV and grid search...")
     models = train_with_cv(X_train, y_train, model_type_cls="rf", model_type_reg="gb", do_grid=True)
 
     print("\nPredicting on the test data (just as an example)...")
-    preds = predict_all(models, X_test)
-    preds.to_csv("outputs/s9_wells_rgb_predictions.csv", index=False)
+    preds = predict_all(models, X_test, y_test)
+    preds.to_csv("/content/AgariX/outputs/s9_wells_rgb_predictions.csv", index=False)
+    # X_test["Antibiotic"] = le_x_anti.inverse_transform(X_test["Antibiotic"])
+    print(X_test.head())
     print(preds.head())
+    print(y_test.head())
 
     # In Jupyter/Colab: returning the Styler will render the colored table
     # df_with_color_pixel(preds)
-    styled = df_with_color_pixel(preds)
-    html = styled.to_html()  # pandas Styler -> HTML
-    with open("table_with_color_swatches.html", "w", encoding="utf-8") as f:
-        f.write(html)
-    from IPython.display import HTML, display
-    display(HTML(filename="table_with_color_swatches.html")) 
+    # styled = df_with_color_pixel(preds)
+    # html = styled.to_html()  # pandas Styler -> HTML
+    # with open("table_with_color_swatches.html", "w", encoding="utf-8") as f:
+    #     f.write(html)
+    # from IPython.display import HTML, display
+    # display(HTML(filename="/content/AgariX/outputs/table_with_color_swatches.html")) 
