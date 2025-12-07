@@ -104,7 +104,7 @@ def make_regressor(model_type: str):
 # -----------------------
 @dataclass
 class TrainedModels:
-    antibiotic_model: any
+    doz_model: any
     strain_model: any
     concentration_model: any
     category_model: any
@@ -129,11 +129,11 @@ def train_with_cv(X: pd.DataFrame,
     """
 
     # --- Antibiotic (classification)
-    if "Antibiotic" in y.columns:
-        antibiotic_col="Antibiotic"
-        maskA = y[antibiotic_col].notna()
+    if "doz" in y.columns:
+        doz_col="doz"
+        maskA = y[doz_col].notna()
         X_A   = X.loc[maskA, :]
-        yA    = y.loc[maskA, antibiotic_col]
+        yA    = y.loc[maskA, doz_col]
         yA_enc, leA = _encode(yA)
 
         skfA = StratifiedKFold(n_splits=min(k_cls, len(np.unique(yA_enc))), shuffle=True, random_state=0)
@@ -211,8 +211,8 @@ def train_with_cv(X: pd.DataFrame,
 
     # If you need probability outputs from classifiers, SVM has .predict_proba when probability=True
     return TrainedModels(
-        antibiotic_model=clfA, strain_model=clfB, category_model=clfC, concentration_model=regD,
-        le_antibiotic=leA, le_strain=leB, le_category=leC
+        doz_model=clfA, strain_model=clfB, category_model=clfC, concentration_model=regD,
+        le_doz=leA, le_strain=leB, le_category=leC
     )
 
 # -----------------------
@@ -223,9 +223,9 @@ def predict_all(models: TrainedModels, X_df: pd.DataFrame, y_df: pd.DataFrame) -
 
 
     y_pred = pd.DataFrame()
-    if models.antibiotic_model:
-        tt = models.antibiotic_model.predict(X)
-        y_pred["Antibiotic"] = models.le_antibiotic.inverse_transform(tt)
+    if models.doz_model:
+        tt = models.doz_model.predict(X)
+        y_pred["Antibiotic"] = models.le_doz.inverse_transform(tt)
         # y_pred["Antibiotic"] = tt
     # else:
     #     yA_lbl = None
@@ -245,6 +245,8 @@ def predict_all(models: TrainedModels, X_df: pd.DataFrame, y_df: pd.DataFrame) -
         # y_pred["Category"] = tt
     # else:
     #     yC_lbl = None   
+    if models.concentration_model:
+        y_pred["Concentration_mgL"] = models.concentration_model.predict(X)
     if models.concentration_model:
         y_pred["Concentration_mgL"] = models.concentration_model.predict(X)
     else:
@@ -302,10 +304,10 @@ if __name__ == "__main__":
 
 
     # df_shuffled = df.sample(frac=1, random_state=42).reset_index(drop=True)
-    X_train = X_shuf.iloc[:40]  # use first 40 samples for training (rest can be used for testing)
-    y_train = y_shuf.iloc[:40]
-    X_test = X_shuf.iloc[40:]
-    y_test = y_shuf.iloc[40:]
+    X_train = X_shuf.iloc[:100]  # use first 40 samples for training (rest can be used for testing)
+    y_train = y_shuf.iloc[:100]
+    X_test = X_shuf.iloc[100:]
+    y_test = y_shuf.iloc[100:]
     # print(X_train)
     # print(X_test)
     # print(y_train)
