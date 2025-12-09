@@ -1,4 +1,4 @@
-mean_R,mean_G,mean_B,x,y,dye,doz,antibiotic,category
+mean_R,mean_G,mean_B,x,y,strain,doz,antibiotic,category
 0.930972566,0.713418747,0.832339456,0,0,Ecoli_asb,0,Ampicillin,S
 0.930972566,0.713418747,0.832339456,0,1,Ecoli_asb,1,Ampicillin,S
 0.930972566,0.713418747,0.832339456,0,2,Ecoli_asb,2,Ampicillin,S
